@@ -92,7 +92,7 @@ class BuilderBase:
                 wrapper = os.path.join(self.build_dir, "succeed.bat")
                 with open(wrapper, "w") as f:
                     f.write("@echo off\n")
-                    arch = self.build_opts.get_vcvars_arch()
+                    arch = "arm64" if self.build_opts.is_arm() else "amd64"
                     f.write(f'call "{vcvarsall}" {arch}\n')
                     f.write("set ERRORLEVEL=0\n")
                     f.write("exit /b 0\n")
@@ -1418,7 +1418,7 @@ class OpenSSLBuilder(BuilderBase):
             # jom is compatible with nmake, adds the /j argument for parallel build
             make = "jom.exe"
             make_j_args = ["/j%s" % self.num_jobs]
-            args = ["VC-WIN64A-masm", "-utf-8"]
+            args = ["VC-WIN64-ARM64", "-utf-8"] if self.build_opts.is_arm() else ["VC-WIN64A-masm", "-utf-8"]
             # fixes "if multiple CL.EXE write to the same .PDB file, please use /FS"
             extra_args = ["/FS"]
         elif self.build_opts.is_darwin():
@@ -1514,7 +1514,10 @@ class Boost(BuilderBase):
             if self.build_opts.is_windows():
                 bootstrap = os.path.join(self.src_dir, "bootstrap.bat")
                 self._check_cmd([bootstrap] + bootstrap_args, cwd=self.src_dir, env=env)
-                args += ["address-model=64"]
+                if self.build_opts.is_arm():
+                    args += ["address-model=64", "architecture=arm"]
+                else:
+                    args += ["address-model=64"]
             else:
                 bootstrap = os.path.join(self.src_dir, "bootstrap.sh")
                 self._check_cmd(
