@@ -1495,6 +1495,14 @@ class Boost(BuilderBase):
 
     def _build(self, reconfigure: bool) -> None:
         env = self._compute_env()
+        if self.build_opts.is_windows() and self.build_opts.is_arm():
+            if not self.b2_args:
+                self.b2_args = []
+        
+            self.b2_args += [
+                "pch=off",
+                "context-impl=winfib",
+            ]
         linkage: list[str] = ["static"]
         if self.build_opts.is_windows() or self.build_opts.shared_libs:
             linkage.append("shared")
