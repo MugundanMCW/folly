@@ -92,7 +92,8 @@ class BuilderBase:
                 wrapper = os.path.join(self.build_dir, "succeed.bat")
                 with open(wrapper, "w") as f:
                     f.write("@echo off\n")
-                    f.write(f'call "{vcvarsall}" amd64\n')
+                    arch = self.build_opts.get_vcvars_arch()
+                    f.write(f'call "{vcvarsall}" {arch}\n')
                     f.write("set ERRORLEVEL=0\n")
                     f.write("exit /b 0\n")
                 return [wrapper, "&&"]
