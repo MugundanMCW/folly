@@ -1500,11 +1500,13 @@ TEST(F14FastSet, disabledDoubleTransparent) {
   static_assert(std::is_convertible<C, B<char>>::value);
   static_assert(!std::is_convertible<C, A>::value);
 
+#if FOLLY_F14_VECTOR_INTRINSICS_AVAILABLE
   F14FastSet<B<char>, transparent<AHasher>, transparent<std::equal_to<A>>> set;
   set.emplace(A{10});
 
   EXPECT_TRUE(set.find(C{10}) != set.end());
   EXPECT_TRUE(set.find(C{20}) == set.end());
+#endif
 }
 
 namespace {
