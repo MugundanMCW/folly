@@ -18,7 +18,13 @@
 
 #include <glog/logging.h>
 
-#ifdef _MSC_VER
+// intrin.h is safe on all MSVC targets including ARM64
+#if defined(_MSC_VER)
+#include <intrin.h>
+#endif
+
+// immintrin.h is x86/x64 only
+#if defined(_MSC_VER) && (defined(_M_X64) || defined(_M_IX86))
 #include <immintrin.h>
 #endif
 
@@ -44,17 +50,37 @@ namespace instructions {
 struct Default {
   static std::string_view name() noexcept { return "Default"; }
   static bool supported(const folly::CpuId& /* cpuId */ = {}) { return true; }
+
   static FOLLY_ALWAYS_INLINE uint64_t popcount(uint64_t value) {
+#if defined(_MSC_VER)
+    return uint64_t(__popcnt64(value));
+#else
     return uint64_t(__builtin_popcountll(value));
+#endif
   }
+
   static FOLLY_ALWAYS_INLINE int ctz(uint64_t value) {
     DCHECK_GT(value, 0u);
+#if defined(_MSC_VER)
+    unsigned long index;
+    _BitScanForward64(&index, value);
+    return int(index);
+#else
     return __builtin_ctzll(value);
+#endif
   }
+
   static FOLLY_ALWAYS_INLINE int clz(uint64_t value) {
     DCHECK_GT(value, 0u);
+#if defined(_MSC_VER)
+    unsigned long index;
+    _BitScanReverse64(&index, value);
+    return 63 - int(index);
+#else
     return __builtin_clzll(value);
+#endif
   }
+
   static FOLLY_ALWAYS_INLINE uint64_t blsr(uint64_t value) {
     return value & (value - 1);
   }
