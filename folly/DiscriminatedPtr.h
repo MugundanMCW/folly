@@ -33,7 +33,7 @@
 #include <folly/Portability.h>
 #include <folly/detail/DiscriminatedPtrDetail.h>
 
-#if !FOLLY_X64 && !FOLLY_AARCH64 && !FOLLY_PPC64 && !FOLLY_RISCV64
+#if !FOLLY_X64 && !FOLLY_AARCH64 && !FOLLY_PPC64 && !FOLLY_RISCV64 && !defined(_M_X64) && !defined(_M_ARM64)
 #error "DiscriminatedPtr is x64, arm64, ppc64 and riscv64 specific code."
 #endif
 
