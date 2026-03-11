@@ -67,6 +67,10 @@
 #include <folly/lang/CString.h>
 #include <folly/portability/Builtins.h>
 
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
+
 #ifdef __BMI2__
 #include <immintrin.h>
 #endif
@@ -183,14 +187,27 @@ inline constexpr T extractFirstSet(T const v) {
 /// Returns the number of bits which are set.
 template <typename T>
 inline constexpr unsigned int popcount(T const v) {
-  using U0 = unsigned int;
-  using U1 = unsigned long int;
   using U2 = unsigned long long int;
   using detail::bits_to_unsigned;
   static_assert(sizeof(T) <= sizeof(U2), "over-sized type");
   static_assert(std::is_integral<T>::value, "non-integral type");
   static_assert(!std::is_same<T, bool>::value, "bool type");
 
+#if defined(__cpp_lib_popcount) && __cpp_lib_popcount >= 202002L
+  // C++20 std::popcount is constexpr and works on all platforms
+  return static_cast<unsigned int>(
+      std::popcount(bits_to_unsigned<U2>(v)));
+#elif defined(_MSC_VER)
+  // MSVC does not have __builtin_popcount, use std::popcount if available
+  // otherwise fall back to __popcnt intrinsics.
+  return static_cast<unsigned int>(
+      sizeof(T) <= 4
+          ? __popcnt(static_cast<unsigned int>(bits_to_unsigned<U2>(v)))
+          : static_cast<unsigned int>(__popcnt64(bits_to_unsigned<U2>(v))));
+  // clang-format on
+#else
+  using U0 = unsigned int;
+  using U1 = unsigned long int;
   // clang-format off
   return static_cast<unsigned int>(
       sizeof(T) <= sizeof(U0) ? __builtin_popcount(bits_to_unsigned<U0>(v)) :
@@ -198,6 +215,7 @@ inline constexpr unsigned int popcount(T const v) {
       sizeof(T) <= sizeof(U2) ? __builtin_popcountll(bits_to_unsigned<U2>(v)) :
       0);
   // clang-format on
+#endif
 }
 
 template <class T>
