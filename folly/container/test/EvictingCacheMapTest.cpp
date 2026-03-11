@@ -739,7 +739,7 @@ TEST(EvictingCacheMap, CustomKeyEqual) {
     EXPECT_EQ(i, map.get(i + nItems));
   }
 }
-
+#if FOLLY_F14_VECTOR_INTRINSICS_AVAILABLE
 TEST(EvictingCacheMap, InvalidHashPartlyUsable) {
   // Some uses of EvictingCacheMap only use constructor+destructor in a header
   // file where the hasher is invalid. (Only fully defined in cpp file.)
@@ -750,6 +750,7 @@ TEST(EvictingCacheMap, InvalidHashPartlyUsable) {
   EvictingCacheMap<int, int, BadHash, BadEq> map2{std::move(map)};
   map = std::move(map2);
 }
+#endif
 
 TEST(EvictingCacheMap, IteratorConversion) {
   using type = EvictingCacheMap<int, int>;
