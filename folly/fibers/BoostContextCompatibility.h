@@ -48,9 +48,15 @@ class FiberImpl {
       unsigned char* /*stackLimit*/,
       size_t stackSize)
       : func_(std::move(func)) {
-    fiber_ = CreateFiber(stackSize, &FiberImpl::fiberFunc, this);
+    // Refer to: https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-createfiberex
+    fiber_ = CreateFiberEx(
+    stackSize,              
+    stackSize,             
+    FIBER_FLAG_FLOAT_SWITCH,
+    &FiberImpl::fiberFunc,
+    this);
     CHECK(fiber_ != nullptr)
-        << "CreateFiber failed: " << GetLastError();
+    << "CreateFiberEx failed: " << GetLastError();
   }
 
   ~FiberImpl() {
@@ -67,7 +73,8 @@ class FiberImpl {
   FiberImpl(FiberImpl&& other) noexcept
       : func_(std::move(other.func_)),
         fiber_(std::exchange(other.fiber_, nullptr)),
-        mainFiber_(std::exchange(other.mainFiber_, nullptr)) {}
+        mainFiber_(std::exchange(other.mainFiber_, nullptr)),
+        convertedThread_(std::exchange(other.convertedThread_, false)) {}
 
   FiberImpl& operator=(FiberImpl&& other) noexcept {
     if (this != &other) {
@@ -75,18 +82,25 @@ class FiberImpl {
       func_ = std::move(other.func_);
       fiber_ = std::exchange(other.fiber_, nullptr);
       mainFiber_ = std::exchange(other.mainFiber_, nullptr);
+      convertedThread_ = std::exchange(other.convertedThread_, false);
     }
     return *this;
   }
 
   void activate() {
       mainFiber_ = GetCurrentFiber();
-      // GetCurrentFiber() returns INVALID_HANDLE_VALUE (not nullptr)
+
+      // On ARM64 Windows, GetCurrentFiber() returns a garbage low address
       // when the thread has not been converted to a fiber yet.
-      if (mainFiber_ == INVALID_HANDLE_VALUE) {
+      // A real fiber handle is always above 64KB (Windows minimum allocation
+      // granularity), so use 0x10000 as the threshold.
+      if (mainFiber_ == nullptr ||
+          mainFiber_ == INVALID_HANDLE_VALUE ||
+          reinterpret_cast<uintptr_t>(mainFiber_) < 0x10000) {
           mainFiber_ = ConvertThreadToFiber(nullptr);
           CHECK(mainFiber_ != nullptr)
               << "ConvertThreadToFiber failed: " << GetLastError();
+          convertedThread_ = true;
       }
       SwitchToFiber(fiber_);
   }
@@ -95,6 +109,10 @@ class FiberImpl {
   void deactivate() {
     DCHECK(mainFiber_ != nullptr) << "deactivate() called before activate()";
     SwitchToFiber(std::exchange(mainFiber_, nullptr));
+    if (convertedThread_) {
+        ConvertFiberToThread();
+        convertedThread_ = false;
+    }
   }
 
   void* getStackPointer() const { return nullptr; }
@@ -112,6 +130,7 @@ class FiberImpl {
   folly::Function<void()> func_;
   LPVOID fiber_{nullptr};
   LPVOID mainFiber_{nullptr};
+  bool convertedThread_{false};
 };
 
 } // namespace fibers
