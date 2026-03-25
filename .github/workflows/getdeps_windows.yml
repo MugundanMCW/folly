@@ -401,4 +401,4 @@ jobs:
         name: folly
         path: _artifacts
     - name: Test folly
-      run: python build/fbcode_builder/getdeps.py test --filter container_f14_map_test.F14FastMap.statefulFunctors --src-dir=. folly
+      run: python build/fbcode_builder/getdeps.py test folly --filter container_f14_map_test.F14FastMap.statefulFunctors --src-dir=. folly
