@@ -27,6 +27,8 @@ jobs:
         git config --system core.symlinks true
       shell: cmd
     - uses: actions/checkout@v6
+      with:
+        ref: 8915340179698d1b11d82e29de51704474934364
     - id: paths
       name: Query paths
       run: python build/fbcode_builder/getdeps.py query-paths --recursive --src-dir=. folly  >> $env:GITHUB_OUTPUT
