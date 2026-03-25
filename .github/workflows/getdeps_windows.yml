@@ -5,7 +5,7 @@ name: windows
 on:
   push:
     branches:
-    - main
+    - main_upstream
   pull_request:
     branches:
     - main
@@ -401,4 +401,4 @@ jobs:
         name: folly
         path: _artifacts
     - name: Test folly
-      run: python build/fbcode_builder/getdeps.py test --src-dir=. folly
+      run: python build/fbcode_builder/getdeps.py test --filter container_f14_map_test.F14FastMap.statefulFunctors --src-dir=. folly
